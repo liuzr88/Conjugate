@@ -1,9 +1,17 @@
 import apexpy
 import datetime
 
-# Initialise the IGRF model once using today's date.
-# apexpy.Apex accepts a datetime object and derives the decimal year internally.
-apex = apexpy.Apex(date=datetime.datetime.now())
+# Lazy initialization: the IGRF model is loaded on first use rather than at
+# import time, so importing this module does not trigger expensive I/O and
+# does not fail in restricted environments.
+_apex = None
+
+
+def _get_apex():
+    global _apex
+    if _apex is None:
+        _apex = apexpy.Apex(date=datetime.datetime.now(datetime.timezone.utc))
+    return _apex
 
 
 def get_conjugate_point(lat, lon, height):
@@ -45,7 +53,7 @@ def get_conjugate_point(lat, lon, height):
     if height < 0:
         raise ValueError("Altitude must be >= 0 km")
 
-    c_lat, c_lon, error = apex.map_to_height(lat, lon, height, height, conjugate=True)
+    c_lat, c_lon, error = _get_apex().map_to_height(lat, lon, height, height, conjugate=True)
     return float(c_lat), float(c_lon), float(error)
 
 
