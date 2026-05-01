@@ -5,7 +5,7 @@ Public API:
     trace_field_line(lat, lon, height, n_steps=50) -> dict[str, list[float]]
 """
 
-from math import radians, cos, sin, sqrt
+from math import radians, cos, sin
 import numpy as np
 from get_conjugate_apex import _get_apex
 
@@ -55,6 +55,8 @@ def trace_field_line(lat: float, lon: float, height: float, n_steps: int = 50) -
     """
     if height < 0:
         raise ValueError("Altitude must be >= 0 km")
+    if n_steps < 2:
+        raise ValueError("n_steps must be >= 2")
 
     apex = _get_apex()
 
@@ -65,7 +67,7 @@ def trace_field_line(lat: float, lon: float, height: float, n_steps: int = 50) -
     alat_rad = radians(abs(alat))          # use abs: formula is symmetric
     cos_alat = cos(alat_rad)
     if cos_alat < 1e-6:
-        # Near magnetic equator — apex is essentially at infinity; cap at 50 000 km
+        # Near magnetic pole (alat ≈ ±90°) — cos_alat → 0, apex → infinity; cap at 50 000 km
         apex_alt = 50_000.0
     else:
         apex_alt = 6371.0 * (1.0 / cos_alat**2 - 1.0)
@@ -74,18 +76,30 @@ def trace_field_line(lat: float, lon: float, height: float, n_steps: int = 50) -
     upward_alts   = np.linspace(height, apex_alt, n_steps)   # input → apex
     downward_alts = np.linspace(apex_alt, height, n_steps)   # apex → conjugate
 
+    # Upward leg: same hemisphere, increasing altitude (vectorized apexpy call)
+    up_lats, up_lons, _ = apex.map_to_height(
+        np.full(n_steps, lat), np.full(n_steps, lon),
+        np.full(n_steps, height), upward_alts,
+    )
+
+    # Downward leg: conjugate hemisphere, decreasing altitude (vectorized apexpy call)
+    dn_lats, dn_lons, _ = apex.map_to_height(
+        np.full(n_steps, lat), np.full(n_steps, lon),
+        np.full(n_steps, height), downward_alts,
+        conjugate=True,
+    )
+
+    # Convert both legs to normalised 3D Cartesian
     xs, ys, zs = [], [], []
-
-    # Upward leg: same hemisphere, increasing altitude
-    for alt in upward_alts:
-        g_lat, g_lon, _ = apex.map_to_height(lat, lon, height, float(alt))
+    for g_lat, g_lon, alt in zip(up_lats, up_lons, upward_alts):
         x, y, z = _geo_to_cartesian(float(g_lat), float(g_lon), float(alt))
-        xs.append(x); ys.append(y); zs.append(z)
-
-    # Downward leg: conjugate hemisphere, decreasing altitude
-    for alt in downward_alts:
-        g_lat, g_lon, _ = apex.map_to_height(lat, lon, height, float(alt), conjugate=True)
+        xs.append(x)
+        ys.append(y)
+        zs.append(z)
+    for g_lat, g_lon, alt in zip(dn_lats, dn_lons, downward_alts):
         x, y, z = _geo_to_cartesian(float(g_lat), float(g_lon), float(alt))
-        xs.append(x); ys.append(y); zs.append(z)
+        xs.append(x)
+        ys.append(y)
+        zs.append(z)
 
     return {"x": xs, "y": ys, "z": zs}

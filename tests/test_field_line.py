@@ -81,3 +81,19 @@ def test_geo_to_cartesian_known_points():
     assert abs(x) < 1e-10
     assert abs(y) < 1e-10
     assert abs(z - 1.0) < 1e-10
+
+
+def test_conjugate_endpoint_in_opposite_hemisphere():
+    """Last point of the arc should be in the opposite hemisphere from the input.
+    Input at lat=-30.3 (southern). The z-component of the final Cartesian point
+    encodes sin(lat), so z > 0 means northern hemisphere."""
+    result = trace_field_line(-30.3, -70.7, 0)
+    assert result["z"][-1] > 0, (
+        f"Expected conjugate endpoint in northern hemisphere (z > 0), got z={result['z'][-1]:.4f}"
+    )
+
+
+def test_invalid_n_steps_raises():
+    """n_steps < 2 must raise ValueError."""
+    with pytest.raises(ValueError, match="n_steps must be >= 2"):
+        trace_field_line(-30.3, -70.7, 0, n_steps=1)
