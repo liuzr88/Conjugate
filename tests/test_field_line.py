@@ -61,23 +61,23 @@ def test_altitude_above_zero_shifts_endpoints():
 
 def test_geo_to_cartesian_known_points():
     """_geo_to_cartesian produces correct Cartesian coordinates for known inputs."""
-    from field_line import _geo_to_cartesian
+    from field_line import geo_to_cartesian
     import math
 
     # At lat=0, lon=0, alt=0: should be on unit sphere at (1, 0, 0)
-    x, y, z = _geo_to_cartesian(0.0, 0.0, 0.0)
+    x, y, z = geo_to_cartesian(0.0, 0.0, 0.0)
     assert abs(x - 1.0) < 1e-10
     assert abs(y) < 1e-10
     assert abs(z) < 1e-10
 
     # At lat=0, lon=0, alt=6371: R=2.0, so (2, 0, 0)
-    x, y, z = _geo_to_cartesian(0.0, 0.0, 6371.0)
+    x, y, z = geo_to_cartesian(0.0, 0.0, 6371.0)
     assert abs(x - 2.0) < 1e-10
     assert abs(y) < 1e-10
     assert abs(z) < 1e-10
 
     # At lat=90, lon=0, alt=0: north pole = (0, 0, 1)
-    x, y, z = _geo_to_cartesian(90.0, 0.0, 0.0)
+    x, y, z = geo_to_cartesian(90.0, 0.0, 0.0)
     assert abs(x) < 1e-10
     assert abs(y) < 1e-10
     assert abs(z - 1.0) < 1e-10

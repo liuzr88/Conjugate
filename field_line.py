@@ -10,7 +10,7 @@ import numpy as np
 from get_conjugate_apex import _get_apex
 
 
-def _geo_to_cartesian(lat_deg: float, lon_deg: float, alt_km: float):
+def geo_to_cartesian(lat_deg: float, lon_deg: float, alt_km: float):
     """
     Convert geographic (lat, lon, alt) to normalised 3D Cartesian coordinates.
 
@@ -92,12 +92,12 @@ def trace_field_line(lat: float, lon: float, height: float, n_steps: int = 50) -
     # Convert both legs to normalised 3D Cartesian
     xs, ys, zs = [], [], []
     for g_lat, g_lon, alt in zip(up_lats, up_lons, upward_alts):
-        x, y, z = _geo_to_cartesian(float(g_lat), float(g_lon), float(alt))
+        x, y, z = geo_to_cartesian(float(g_lat), float(g_lon), float(alt))
         xs.append(x)
         ys.append(y)
         zs.append(z)
     for g_lat, g_lon, alt in zip(dn_lats, dn_lons, downward_alts):
-        x, y, z = _geo_to_cartesian(float(g_lat), float(g_lon), float(alt))
+        x, y, z = geo_to_cartesian(float(g_lat), float(g_lon), float(alt))
         xs.append(x)
         ys.append(y)
         zs.append(z)

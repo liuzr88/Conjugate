@@ -11,7 +11,7 @@ import streamlit as st
 from streamlit_plotly_events import plotly_events
 
 from get_conjugate_apex import get_conjugate_point
-from field_line import trace_field_line, _geo_to_cartesian
+from field_line import trace_field_line, geo_to_cartesian
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -147,7 +147,7 @@ def make_globe_fig():
         )
 
         # Input point (blue)
-        ix, iy, iz = _geo_to_cartesian(lat, lon, alt)
+        ix, iy, iz = geo_to_cartesian(lat, lon, alt)
         traces.append(
             go.Scatter3d(
                 x=[ix], y=[iy], z=[iz],
@@ -159,7 +159,7 @@ def make_globe_fig():
         )
 
         # Conjugate point (green)
-        cx, cy, cz = _geo_to_cartesian(r["c_lat"], r["c_lon"], alt)
+        cx, cy, cz = geo_to_cartesian(r["c_lat"], r["c_lon"], alt)
         traces.append(
             go.Scatter3d(
                 x=[cx], y=[cy], z=[cz],
@@ -196,6 +196,15 @@ def make_globe_fig():
 # 2D Clickable Map
 # ---------------------------------------------------------------------------
 def make_map_fig():
+    # Coastlines as explicit first trace
+    coast_trace = go.Scattergeo(
+        lat=[None], lon=[None],
+        mode="lines",
+        line=dict(color="#4a7a9b", width=1),
+        showlegend=False,
+        hoverinfo="skip",
+    )
+
     # Invisible click-target grid (lon as x, lat as y for streamlit-plotly-events)
     lats = np.linspace(-90, 90, 37)
     lons = np.linspace(-180, 180, 73)
@@ -219,7 +228,7 @@ def make_map_fig():
         hovertemplate=f"Input: {lat:.2f}°, {lon:.2f}°<extra></extra>",
     )
 
-    traces = [click_trace, input_marker]
+    traces = [coast_trace, click_trace, input_marker]
 
     r = st.session_state.result
     if r:
@@ -261,9 +270,9 @@ clicked = plotly_events(make_map_fig(), click_event=True, key="map",
                         override_height=260)
 if clicked:
     # streamlit-plotly-events returns 'x' = lon, 'y' = lat for Scattergeo traces
-    clicked_lon = clicked[0].get("x")
-    clicked_lat = clicked[0].get("y")
-    if clicked_lat is not None and clicked_lon is not None:
-        st.session_state.lat = float(clicked_lat)
-        st.session_state.lon = float(clicked_lon)
+    try:
+        st.session_state.lon = float(clicked[0]["x"])
+        st.session_state.lat = float(clicked[0]["y"])
         st.rerun()
+    except (KeyError, TypeError, ValueError):
+        pass  # Ignore malformed click events
