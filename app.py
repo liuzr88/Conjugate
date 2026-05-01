@@ -85,11 +85,15 @@ if compute:
     try:
         c_lat, c_lon, error = get_conjugate_point(lat, lon, alt)
         field_line = trace_field_line(lat, lon, alt)
+        ix, iy, iz = geo_to_cartesian(lat, lon, alt)
+        cx, cy, cz = geo_to_cartesian(c_lat, c_lon, alt)
         st.session_state.result = {
             "c_lat": c_lat,
             "c_lon": c_lon,
             "error": error,
             "field_line": field_line,
+            "input_xyz": (ix, iy, iz),
+            "conj_xyz": (cx, cy, cz),
         }
     except ValueError as e:
         st.session_state.error_msg = str(e)
@@ -99,7 +103,7 @@ if compute:
 # ---------------------------------------------------------------------------
 # 3D Globe
 # ---------------------------------------------------------------------------
-def make_globe_fig():
+def make_globe_fig(lat, lon, alt, result):
     # Sphere surface
     phi   = np.linspace(0, 2 * np.pi, 120)
     theta = np.linspace(0, np.pi, 60)
@@ -126,7 +130,7 @@ def make_globe_fig():
         )
     ]
 
-    r = st.session_state.result
+    r = result
     if r:
         fl = r["field_line"]
 
@@ -147,7 +151,7 @@ def make_globe_fig():
         )
 
         # Input point (blue)
-        ix, iy, iz = geo_to_cartesian(lat, lon, alt)
+        ix, iy, iz = r["input_xyz"]
         traces.append(
             go.Scatter3d(
                 x=[ix], y=[iy], z=[iz],
@@ -159,7 +163,7 @@ def make_globe_fig():
         )
 
         # Conjugate point (green)
-        cx, cy, cz = geo_to_cartesian(r["c_lat"], r["c_lon"], alt)
+        cx, cy, cz = r["conj_xyz"]
         traces.append(
             go.Scatter3d(
                 x=[cx], y=[cy], z=[cz],
@@ -195,7 +199,7 @@ def make_globe_fig():
 # ---------------------------------------------------------------------------
 # 2D Clickable Map
 # ---------------------------------------------------------------------------
-def make_map_fig():
+def make_map_fig(lat, lon, result):
     # Coastlines as explicit first trace
     coast_trace = go.Scattergeo(
         lat=[None], lon=[None],
@@ -230,7 +234,7 @@ def make_map_fig():
 
     traces = [coast_trace, click_trace, input_marker]
 
-    r = st.session_state.result
+    r = result
     if r:
         traces.append(go.Scattergeo(
             lat=[r["c_lat"]], lon=[r["c_lon"]],
@@ -263,10 +267,10 @@ def make_map_fig():
 # Render
 # ---------------------------------------------------------------------------
 st.markdown("### 🌍 3D Globe")
-st.plotly_chart(make_globe_fig(), use_container_width=True, key="globe")
+st.plotly_chart(make_globe_fig(lat, lon, alt, st.session_state.result), key="globe")
 
 st.markdown("### 🗺️ Click map to set input point")
-clicked = plotly_events(make_map_fig(), click_event=True, key="map",
+clicked = plotly_events(make_map_fig(lat, lon, st.session_state.result), click_event=True, key="map",
                         override_height=260)
 if clicked:
     # streamlit-plotly-events returns 'x' = lon, 'y' = lat for Scattergeo traces
@@ -275,4 +279,4 @@ if clicked:
         st.session_state.lat = float(clicked[0]["y"])
         st.rerun()
     except (KeyError, TypeError, ValueError):
-        pass  # Ignore malformed click events
+        pass  # Malformed click payload — ignore silently
