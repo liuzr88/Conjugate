@@ -26,7 +26,8 @@ def test_length_is_two_n_steps():
 
 
 def test_endpoints_on_earth_surface():
-    """First and last points should be at Earth's surface (R ≈ 1.0 in normalised coords)."""
+    """At height=0, first and last points are at Earth's surface (R ≈ 1.0).
+    When height > 0, endpoints are above the surface by height/6371 in normalised coords."""
     result = trace_field_line(-30.3, -70.7, 0)
     x, y, z = result["x"], result["y"], result["z"]
     r_start = math.sqrt(x[0]**2 + y[0]**2 + z[0]**2)
@@ -56,3 +57,27 @@ def test_altitude_above_zero_shifts_endpoints():
     r0_start   = math.sqrt(result0["x"][0]**2   + result0["y"][0]**2   + result0["z"][0]**2)
     r300_start = math.sqrt(result300["x"][0]**2 + result300["y"][0]**2 + result300["z"][0]**2)
     assert r300_start > r0_start, "300 km start should be further from centre than 0 km start"
+
+
+def test_geo_to_cartesian_known_points():
+    """_geo_to_cartesian produces correct Cartesian coordinates for known inputs."""
+    from field_line import _geo_to_cartesian
+    import math
+
+    # At lat=0, lon=0, alt=0: should be on unit sphere at (1, 0, 0)
+    x, y, z = _geo_to_cartesian(0.0, 0.0, 0.0)
+    assert abs(x - 1.0) < 1e-10
+    assert abs(y) < 1e-10
+    assert abs(z) < 1e-10
+
+    # At lat=0, lon=0, alt=6371: R=2.0, so (2, 0, 0)
+    x, y, z = _geo_to_cartesian(0.0, 0.0, 6371.0)
+    assert abs(x - 2.0) < 1e-10
+    assert abs(y) < 1e-10
+    assert abs(z) < 1e-10
+
+    # At lat=90, lon=0, alt=0: north pole = (0, 0, 1)
+    x, y, z = _geo_to_cartesian(90.0, 0.0, 0.0)
+    assert abs(x) < 1e-10
+    assert abs(y) < 1e-10
+    assert abs(z - 1.0) < 1e-10
